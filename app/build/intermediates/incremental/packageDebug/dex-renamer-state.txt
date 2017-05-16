@@ -1,0 +1,7 @@
+#Tue May 16 13:59:53 CDT 2017
+base.0=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\10000\\instant-run-bootstrap_d510e322a8990a31d0291adeb32ea8d1ccee2edd
+renamed.1=classes.dex
+renamed.0=classes2.dex
+file.1=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\10000\\instant-run_c7925b25f79556f9e2d57c67047d9f02d7fffb03\\classes.dex
+base.1=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\10000\\instant-run_c7925b25f79556f9e2d57c67047d9f02d7fffb03
+file.0=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\10000\\instant-run-bootstrap_d510e322a8990a31d0291adeb32ea8d1ccee2edd\\classes.dex

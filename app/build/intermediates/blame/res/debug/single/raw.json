@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\res\\merged\\debug\\raw\\runtrack4.wav",
+        "source": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\src\\main\\res\\raw\\runtrack4.wav"
+    },
+    {
+        "merged": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\res\\merged\\debug\\raw\\runtrack2.wav",
+        "source": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\src\\main\\res\\raw\\runtrack2.wav"
+    },
+    {
+        "merged": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\res\\merged\\debug\\raw\\runtrack3.wav",
+        "source": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\src\\main\\res\\raw\\runtrack3.wav"
+    },
+    {
+        "merged": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\res\\merged\\debug\\raw\\runtrack1.wav",
+        "source": "D:\\AndroidProject\\DMAS\\PaceConductor\\app\\src\\main\\res\\raw\\runtrack1.wav"
+    }
+]

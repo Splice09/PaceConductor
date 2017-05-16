@@ -33,7 +33,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 //	private static final String RT4PLAY = null;
 	private SensorManager sensorManager;
 	private Button mStartButton;
-	private boolean buttonState = false;
+	private boolean buttonState = false; //false = inactive
 	private boolean activityRunning;
 	private long timeStamp;
 	private static long CONVERTER = 1000000;
@@ -41,10 +41,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 	private static double SIX_MPH = 261.1;
 	private static double EIGHT_MPH = 196.9;
 	private static double TEN_MPH = 171.5;
-	static MediaPlayer rT1 = null;
-	static MediaPlayer rT2 = null;
-	static MediaPlayer rT3 = null;
-	static MediaPlayer rT4 = null;
+
 //	private boolean rt1playing = false;
 //	private boolean rt2playing = false;
 //	private boolean rt3playing = false;
@@ -54,9 +51,14 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //initialize sensor manager
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        //initialize start button
+
+		//initialize sensor manager
+        //sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+		//initialize service intent
+		final Intent serviceIntent = new Intent(this, MyService.class);
+
+		//initialize start button
         mStartButton = (Button)findViewById(R.id.start_button);
         if(savedInstanceState != null){
         	mStartButton.setText(savedInstanceState.getString(BUTTONTEXT));
@@ -64,24 +66,17 @@ public class MainActivity extends Activity implements SensorEventListener {
         mStartButton.setOnClickListener(new View.OnClickListener(){
         	@Override
         	public void onClick(View v){
-        		//change text of button to stop
-        		if(buttonState == false){
-        			mStartButton.setText("Stop");
+        		//if music is active
+        		if(buttonState){
+        			mStartButton.setText("Start");
         			//button control boolean
         			buttonState = false;
                     //stop the service
-                    stopService(new Intent(this, MyService.class));
+                    stopService(serviceIntent);
         			//step detection boolean
         	        activityRunning = false;
-        		}
-        		else{
-        			mStartButton.setText("Start");
-        			//button control boolean
-        			buttonState = true;
-        			//step detection boolean
-        	        activityRunning = true;
-                        startService(new Intent(this, MyService.class));
-                    if(rT1.isPlaying() == false){
+
+					/*if(rT1.isPlaying() == false){
         				rT1.pause();
         			}
         	        if(rT2.isPlaying() == false){
@@ -92,34 +87,36 @@ public class MainActivity extends Activity implements SensorEventListener {
         			}
         			if(rT4.isPlaying() == false){
         				rT4.pause();
-        			}
+        			}*/
+        		}
+        		//if music is inactive
+        		else{
+        			mStartButton.setText("Stop");
+        			//button control boolean
+        			buttonState = true;
+        			//step detection boolean
+        	        activityRunning = true;
+
+					startService(serviceIntent);
         		}
         	}
         });
     }
 
-    @Override
-    protected void onResume() {
-    	super.onResume();
-
-
-    	
-    	//initialize sensor
-        Sensor stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-        if (stepSensor != null) {
-            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
-        } else {
-            Toast.makeText(this, "Count sensor not available!", Toast.LENGTH_LONG).show();
-        }
-
-    }
-    
+    /*
+    	WILL RETURN TO THIS METHOD AFTER FUTURE INVESTIGATION
+     */
     @Override
     protected void onPause() {
-        super.onPause();
-        //think about moving this statement inside the stop button "if" statement.
+		super.onPause();
+		//initialize service intent
+		/*final Intent serviceIntent = new Intent(this, MyService.class);
+
+
+
         activityRunning = false;
         //Pause any active media
+
 		if(rT1.isPlaying() == true){
 			rT1.pause();
 		}
@@ -131,19 +128,35 @@ public class MainActivity extends Activity implements SensorEventListener {
 		}
 		if(rT4.isPlaying() == true){
 			rT4.pause();
-		}
+		}*/
         // if you unregister the last listener, the hardware will stop detecting step events
         // sensorManager.unregisterListener(this); 
     }
-    
+
+
+    /*
+    	WILL RETURN TO THIS FUNCTION AFTER FURTHER INVESTIGATION.
+    	CONSIDER MOVING SENSOR CHECK TOAST TO ON CREATE
+     */
+	@Override
+	protected void onResume() {
+		super.onResume();
+
+		/*//initialize sensor
+		Sensor stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+		if (stepSensor != null) {
+			sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+		} else {
+			Toast.makeText(this, "Count sensor not available!", Toast.LENGTH_LONG).show();
+		}*/
+
+	}
+
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (activityRunning) {
-        	recordTimeStamp(event);
-        }
 
     }
-    
+ /*
     public void recordTimeStamp(SensorEvent event){
     	Log.i("StepDetected","You have stepped!");
     	if(timeStamp != 0){
@@ -241,7 +254,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     		
     	}
     }
-    
+  */
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
@@ -249,14 +262,21 @@ public class MainActivity extends Activity implements SensorEventListener {
     @Override
     public void onDestroy(){
     	super.onDestroy();
+
+		//initialize service intent
+		final Intent serviceIntent = new Intent(this, MyService.class);
+
+		//stop the service
+		stopService(serviceIntent);
+
 //		rt2playing = false;
 //		rt3playing = false;
 //		rt1playing = false;
 //		rt4playing = false;
-    	rT1.release();
-    	rT2.release();
-    	rT3.release();
-    	rT4.release();
+//    	rT1.release();
+//    	rT2.release();
+//    	rT3.release();
+//    	rT4.release();
     }
     
     @Override

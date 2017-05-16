@@ -1,0 +1,4 @@
+#Fri May 12 15:54:47 CDT 2017
+base.0=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\5\\slice_1
+renamed.0=classes.dex
+file.0=D\:\\AndroidProject\\DMAS\\PaceConductor\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\5\\slice_1\\classes.dex

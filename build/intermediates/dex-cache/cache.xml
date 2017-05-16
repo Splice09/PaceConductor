@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        is-multidex="true"
+        jar="D:\AndroidProject\DMAS\PaceConductor\app\build\intermediates\incremental-classes\debug\instant-run-bootstrap.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
+        sha1="e1b26e03f40c1c23a3114635ea4f790fb08f091b">
+        <dex dex="D:\AndroidProject\DMAS\PaceConductor\app\build\intermediates\transforms\dex\debug\folders\1000\10000\instant-run-bootstrap_d510e322a8990a31d0291adeb32ea8d1ccee2edd\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="D:\AndroidSDK\extras\android\m2repository\com\android\support\support-v4\19.1.0\support-v4-19.1.0.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
+        sha1="85f201b380937e61a9dce6ca90ccf6872abbfb67">
+        <dex dex="D:\AndroidProject\DMAS\PaceConductor\app\build\intermediates\transforms\dex\debug\folders\1000\10\support-v4-19.1.0_be12b2bfe61ce84719ca8adbb64a57e21a77c233\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="D:\AndroidProject\DMAS\PaceConductor\app\build\intermediates\incremental-runtime-classes\debug\instant-run.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
+        sha1="caff8e51a24901cfc9cd7e1cf83d84f4cb0c103b">
+        <dex dex="D:\AndroidProject\DMAS\PaceConductor\app\build\intermediates\transforms\dex\debug\folders\1000\10000\instant-run_c7925b25f79556f9e2d57c67047d9f02d7fffb03\classes.dex" />
+    </item>
+
+</items>
