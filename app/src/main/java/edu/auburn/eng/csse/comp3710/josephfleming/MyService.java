@@ -3,12 +3,15 @@ package edu.auburn.eng.csse.comp3710.josephfleming;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 /**
@@ -23,16 +26,25 @@ public class MyService extends Service implements SensorEventListener {
         VARIABLES
         ==============================
      */
+    //system
+    private boolean activityRunning = false;
+
+    //media
     private MediaPlayer playerTrack1;
     private MediaPlayer playerTrack2;
     private MediaPlayer playerTrack3;
     private MediaPlayer playerTrack4;
 
-    private boolean activityRunning = false;
-
+    //sensor
     private SensorManager sensorManager;
-
     private long timeStamp;
+
+    //telephony
+    private boolean isPausedInCall = true;
+    private PhoneStateListener phoneStateListener;
+    private TelephonyManager telephonyManager;
+
+    //math
     private static long CONVERTER = 1000000;
     private static double FIVE_MPH = 324.7;
     private static double SIX_MPH = 261.1;
@@ -53,6 +65,7 @@ public class MyService extends Service implements SensorEventListener {
         //initialize sensor manager
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         //initialize media players
+
         playerTrack1 = MediaPlayer.create(getApplicationContext(), R.raw.runtrack1);
         playerTrack1.setLooping(true);
 
@@ -65,8 +78,31 @@ public class MyService extends Service implements SensorEventListener {
         playerTrack4 = MediaPlayer.create(getApplicationContext(), R.raw.runtrack4);
         playerTrack4.setLooping(true);
 
-        //play music track 1
-        playerTrack1.start();
+        Log.v("TAG", "Starting telephony.");
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        Log.v("TAG", "Starting listener.");
+        phoneStateListener = new PhoneStateListener(){
+            @Override
+            public void onCallStateChanged(int state, String incomingNumber){
+                Log.v("TAG", "Starting CallStateChange.");
+                switch(state){
+                    case TelephonyManager.CALL_STATE_OFFHOOK:
+                    case TelephonyManager.CALL_STATE_RINGING:
+                        pauseMedia();
+                        isPausedInCall = true;
+                        break;
+                    case TelephonyManager.CALL_STATE_IDLE:
+                        if(isPausedInCall){
+                            isPausedInCall = false;
+                            playMedia();
+                        }
+                        break;
+                }
+            }
+        };
+
+        //Register the listener with the telephony manager
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
 
         return START_STICKY;
     }
@@ -154,6 +190,26 @@ public class MyService extends Service implements SensorEventListener {
         }
     }
 
+    public void pauseMedia(){
+        if(playerTrack1.isPlaying() == true){
+            playerTrack1.pause();
+        }
+        if(playerTrack2.isPlaying() == true){
+            playerTrack2.stop();
+        }
+        if(playerTrack3.isPlaying() == true){
+            playerTrack3.stop();
+        }
+        if(playerTrack4.isPlaying() == true){
+            playerTrack4.stop();
+        }
+    }
+
+    public void playMedia(){
+        //play music track 1
+        playerTrack1.start();
+    }
+
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
 
@@ -162,6 +218,10 @@ public class MyService extends Service implements SensorEventListener {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        if(phoneStateListener != null){
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
+        }
 
         if(playerTrack1.isPlaying() == true){
             playerTrack1.stop();
