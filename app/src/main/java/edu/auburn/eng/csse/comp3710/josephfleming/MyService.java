@@ -21,7 +21,7 @@ import android.util.Log;
  */
 
 public class MyService extends Service implements SensorEventListener {
-
+//, AudioManager.OnAudioFocusChangeListener
     /*  ==============================
         VARIABLES
         ==============================
@@ -34,6 +34,12 @@ public class MyService extends Service implements SensorEventListener {
     private MediaPlayer playerTrack2;
     private MediaPlayer playerTrack3;
     private MediaPlayer playerTrack4;
+
+    //audio manager
+    private AudioManager.OnAudioFocusChangeListener focusListener = null;
+    private AudioManager am = null;
+
+
 
     //sensor
     private SensorManager sensorManager;
@@ -78,9 +84,32 @@ public class MyService extends Service implements SensorEventListener {
         playerTrack4 = MediaPlayer.create(getApplicationContext(), R.raw.runtrack4);
         playerTrack4.setLooping(true);
 
+        focusListener = new AudioManager.OnAudioFocusChangeListener() {
+            public void onAudioFocusChange(int focus) {
+                switch (focus) {
+                    case AudioManager.AUDIOFOCUS_GAIN:
+                        // continue playback and raise volume (if it was previously lowered)
+                        playMedia();
+                        break;
+
+                    case AudioManager.AUDIOFOCUS_LOSS:
+                        // stop playback, de-register buttons, clean up
+                        pauseMedia();
+                        break;
+
+                    case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                    case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                        // consider switching from pause to setting ducking volume
+                        pauseMedia();
+                        break;
+                }
+            }
+        };
+
         Log.v("TAG", "Starting telephony.");
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         Log.v("TAG", "Starting listener.");
+        //set phone state listener to pause audio when handling calls
         phoneStateListener = new PhoneStateListener(){
             @Override
             public void onCallStateChanged(int state, String incomingNumber){
@@ -93,8 +122,21 @@ public class MyService extends Service implements SensorEventListener {
                         break;
                     case TelephonyManager.CALL_STATE_IDLE:
                         if(isPausedInCall){
+                            //set audio manager
                             isPausedInCall = false;
-                            playMedia();
+                            am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+                            // Request focus for music stream and pass AudioManager.OnAudioFocusChangeListener
+                            // implementation reference
+                            int result = am.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC,
+                                    AudioManager.AUDIOFOCUS_GAIN);
+
+                            if(result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+                            {
+                                // Play
+                                playMedia();
+                            }
+
                         }
                         break;
                 }
@@ -106,6 +148,8 @@ public class MyService extends Service implements SensorEventListener {
 
         return START_STICKY;
     }
+
+
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -212,17 +256,25 @@ public class MyService extends Service implements SensorEventListener {
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
-
+        //unused override
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
 
+        //clear phone state listener (for phone calls)
         if(phoneStateListener != null){
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
         }
 
+        //release audio focus (for giving focus to other apps)
+        am.abandonAudioFocus(focusListener);
+        am = null;
+        focusListener = null;
+
+
+        //stop playing all audio tracks & release media players
         if(playerTrack1.isPlaying() == true){
             playerTrack1.stop();
         }
@@ -239,5 +291,56 @@ public class MyService extends Service implements SensorEventListener {
         playerTrack2.release();
         playerTrack3.release();
         playerTrack4.release();
+
+
+
     }
+
+    /*@Override
+    public void onAudioFocusChange(int focusChange) {
+        switch (focusChange)
+        {
+            case AudioManager.AUDIOFOCUS_GAIN:
+                //play
+                playMedia();
+                break;
+
+            case AudioManager.AUDIOFOCUS_LOSS:
+                //stop
+                if(playerTrack1.isPlaying() == true){
+                    playerTrack1.pause();
+                }
+                if(playerTrack2.isPlaying() == true){
+                    playerTrack2.stop();
+                }
+                if(playerTrack3.isPlaying() == true){
+                    playerTrack3.stop();
+                }
+                if(playerTrack4.isPlaying() == true){
+                    playerTrack4.stop();
+                }
+                break;
+
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                //pause
+                //stop
+                if(playerTrack1.isPlaying() == true){
+                    playerTrack1.pause();
+                }
+                if(playerTrack2.isPlaying() == true){
+                    playerTrack2.stop();
+                }
+                if(playerTrack3.isPlaying() == true){
+                    playerTrack3.stop();
+                }
+                if(playerTrack4.isPlaying() == true){
+                    playerTrack4.stop();
+                }
+                break;
+
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                //reduce volume
+                break;
+        }
+    }*/
 }
