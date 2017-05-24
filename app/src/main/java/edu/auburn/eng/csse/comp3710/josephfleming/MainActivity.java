@@ -2,61 +2,63 @@ package edu.auburn.eng.csse.comp3710.josephfleming;
 
 
 import android.app.Activity;
-import android.content.ComponentName;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 import edu.auburn.eng.csse.comp3710.josephfleming.R;
 
+/*
+=========================================================================
+MAIN ACTIVITY
+=========================================================================
+ */
+public class MainActivity extends Activity {
 
+	//SYSTEM
+	private boolean activityRunning;
 
-public class MainActivity extends Activity implements SensorEventListener {
-	
+	//GLOBALS
 	private static final String BUTTONVAL = null;
 	private static final String ACTIVITYVAL = null;
 	private static final String BUTTONTEXT = null;
-//	private static final String RT1PLAY = null;
-//	private static final String RT2PLAY = null;
-//	private static final String RT3PLAY = null;
-//	private static final String RT4PLAY = null;
-	private SensorManager sensorManager;
+
+	//BROADCAST RECEIVER
+	private boolean isReceiverRegistered = false;
+	private Intent serviceIntent = null;
+
+	//BUTTON
 	private Button mStartButton;
 	private boolean buttonState = false; //false = inactive
-	private boolean activityRunning;
-	private long timeStamp;
-	private static long CONVERTER = 1000000;
-	private static double FIVE_MPH = 324.7;
-	private static double SIX_MPH = 261.1;
-	private static double EIGHT_MPH = 196.9;
-	private static double TEN_MPH = 171.5;
 
-//	private boolean rt1playing = false;
-//	private boolean rt2playing = false;
-//	private boolean rt3playing = false;
-//	private boolean rt4playing = false;
-	
+	/*
+    =========================================================================
+    ACTIVITY CONTROL OVERRIDES
+    =========================================================================
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+		//Register broadcast receiver
+		if(!isReceiverRegistered){
+			registerReceiver(broadcastNotificationReceiver, new IntentFilter(MyService.BROADCAST_NOTIFICTION));
+			isReceiverRegistered = true;
+		}
+
 		//initialize sensor manager
         //sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
 		//initialize service intent
-		final Intent serviceIntent = new Intent(this, MyService.class);
+		serviceIntent = new Intent(this, MyService.class);
 
 		//initialize start button
         mStartButton = (Button)findViewById(R.id.start_button);
@@ -75,19 +77,6 @@ public class MainActivity extends Activity implements SensorEventListener {
                     stopService(serviceIntent);
         			//step detection boolean
         	        activityRunning = false;
-
-					/*if(rT1.isPlaying() == false){
-        				rT1.pause();
-        			}
-        	        if(rT2.isPlaying() == false){
-        				rT2.pause();
-        			}
-        			if(rT3.isPlaying() == false){
-        				rT3.pause();
-        			}
-        			if(rT4.isPlaying() == false){
-        				rT4.pause();
-        			}*/
         		}
         		//if music is inactive
         		else{
@@ -103,182 +92,37 @@ public class MainActivity extends Activity implements SensorEventListener {
         });
     }
 
-    /*
-    	WILL RETURN TO THIS METHOD AFTER FUTURE INVESTIGATION
-     */
     @Override
     protected void onPause() {
 		super.onPause();
-		//initialize service intent
-		/*final Intent serviceIntent = new Intent(this, MyService.class);
-
-
-
-        activityRunning = false;
-        //Pause any active media
-
-		if(rT1.isPlaying() == true){
-			rT1.pause();
-		}
-        if(rT2.isPlaying() == true){
-			rT2.pause();
-		}
-		if(rT3.isPlaying() == true){
-			rT3.pause();
-		}
-		if(rT4.isPlaying() == true){
-			rT4.pause();
-		}*/
-        // if you unregister the last listener, the hardware will stop detecting step events
-        // sensorManager.unregisterListener(this); 
     }
 
-
-    /*
-    	WILL RETURN TO THIS FUNCTION AFTER FURTHER INVESTIGATION.
-    	CONSIDER MOVING SENSOR CHECK TOAST TO ON CREATE
-     */
 	@Override
 	protected void onResume() {
 		super.onResume();
-
-		/*//initialize sensor
-		Sensor stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-		if (stepSensor != null) {
-			sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
-		} else {
-			Toast.makeText(this, "Count sensor not available!", Toast.LENGTH_LONG).show();
-		}*/
-
 	}
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-
-    }
- /*
-    public void recordTimeStamp(SensorEvent event){
-    	Log.i("StepDetected","You have stepped!");
-    	if(timeStamp != 0){
-    		String temp1 = Long.toString(event.timestamp);
-    		Log.i("current step timestamp", temp1);
-    		final long deltaT = (event.timestamp - timeStamp);
-    		String temp2 = Long.toString(deltaT);
-    		Log.i("timestamp pre convert", temp2);
-    		mediaStarter(deltaT);
-    	}
-    	this.timeStamp = event.timestamp;
-    }
-    
-    public void mediaStarter(long deltaTime){
-    	//handle playing music here
-    	long conversion = deltaTime/CONVERTER;
-    	String temp = Long.toString(conversion);
-    	Log.i("conversion", temp);
-    	if(conversion >= FIVE_MPH){
-    		//stop all other tracks
-    		if(rT2.isPlaying() == true){
-    			rT2.pause();
-    		}
-    		if(rT3.isPlaying() == true){
-    			rT3.pause();
-    		}
-    		if(rT4.isPlaying() == true){
-    			rT4.pause();
-    		}
-    		//play music track 1
-    		rT1.start();
-//    		rt2playing = false;
-//    		rt3playing = false;
-//    		rt4playing = false;
-//    		rt1playing = true;
-    		
-    	}
-    	else if((conversion < FIVE_MPH) && (conversion >= SIX_MPH)){
-    		//stop all other tracks
-    		if(rT1.isPlaying() == true){
-    			rT1.pause();
-    		}
-    		if(rT3.isPlaying() == true){
-    			rT3.pause();
-    		}
-    		if(rT4.isPlaying() == true){
-    			rT4.pause();
-    		}
-    		//play music track 2
-    		rT2.start();
-//    		rt1playing = false;
-//    		rt3playing = false;
-//    		rt4playing = false;
-//    		rt2playing = true;
-    		
-    	}
-    	else if((conversion < SIX_MPH) && (conversion >= EIGHT_MPH)){
-    		//stop all other tracks
-    		if(rT2.isPlaying() == true){
-    			rT2.pause();
-    		}
-    		if(rT1.isPlaying() == true){
-    			rT1.pause();
-    		}
-    		if(rT4.isPlaying() == true){
-    			rT4.pause();
-    		}
-    		//play music track 3
-    		rT3.start();
-    		
-//    		rt2playing = false;
-//    		rt1playing = false;
-//    		rt4playing = false;
-//    		rt3playing = true;
-    		
-    	}
-    	else if((conversion < EIGHT_MPH) && (conversion >= TEN_MPH)){
-    		//stop all other tracks
-    		if(rT2.isPlaying() == true){
-    			rT2.pause();
-    		}
-    		if(rT3.isPlaying() == true){
-    			rT3.pause();
-    		}
-    		if(rT1.isPlaying() == true){
-    			rT1.pause();
-    		}
-    		//play music track 4
-    			rT4.start();
-    			
-//    		rt2playing = false;
-//    		rt3playing = false;
-//    		rt1playing = false;
-//    		rt4playing = true;
-    		
-    	}
-    }
-  */
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-    }
-    
     @Override
     public void onDestroy(){
     	super.onDestroy();
 
-		//initialize service intent
-		final Intent serviceIntent = new Intent(this, MyService.class);
+		//unregister broadcast receiver
+		if(isReceiverRegistered){
+			unregisterReceiver(broadcastNotificationReceiver);
+			isReceiverRegistered = false;
+		}
 
 		//stop the service
-		stopService(serviceIntent);
-
-//		rt2playing = false;
-//		rt3playing = false;
-//		rt1playing = false;
-//		rt4playing = false;
-//    	rT1.release();
-//    	rT2.release();
-//    	rT3.release();
-//    	rT4.release();
+		if(serviceIntent != null) {
+			stopService(serviceIntent);
+		}
     }
-    
+
+	/*
+    =========================================================================
+    INSTANCE STATE CONTROL OVERRIDES
+    =========================================================================
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -291,10 +135,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     	super.onSaveInstanceState(outState);
     	outState.putBoolean(BUTTONVAL, buttonState);
     	outState.putBoolean(ACTIVITYVAL, activityRunning);
-//    	outState.putBoolean(RT1PLAY, rt1playing);
-//    	outState.putBoolean(RT2PLAY, rt2playing);
-//    	outState.putBoolean(RT3PLAY, rt3playing);
-//    	outState.putBoolean(RT4PLAY, rt4playing);
     	outState.putString(BUTTONTEXT, mStartButton.getText().toString());
     }
     
@@ -303,17 +143,43 @@ public class MainActivity extends Activity implements SensorEventListener {
     	super.onRestoreInstanceState(savedInstanceState);
     	buttonState = savedInstanceState.getBoolean(BUTTONVAL);
     	activityRunning = savedInstanceState.getBoolean(ACTIVITYVAL);
-//    	rt1playing = savedInstanceState.getBoolean(RT1PLAY);
-//    	rt2playing = savedInstanceState.getBoolean(RT2PLAY);
-//    	rt3playing = savedInstanceState.getBoolean(RT3PLAY);
-//    	rt4playing = savedInstanceState.getBoolean(RT4PLAY);
     }
-    
+
+	/*
+    =========================================================================
+    CONFIGURATION CONTROL OVERRIDES
+    =========================================================================
+     */
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
-    
-    
+
+	/*
+    =========================================================================
+    BROADCAST RECEIVER CONTROLS
+    =========================================================================
+     */
+	private void ChangeButton(Intent broadcastIntent){
+		String broadcastVal = broadcastIntent.getStringExtra("stop");
+		int broadcastIntVal = Integer.parseInt(broadcastVal);
+
+		if(broadcastIntVal == 1){
+			//Toast.makeText(this, "Broadcast is working!", Toast.LENGTH_LONG).show();
+			mStartButton.setText("Start");
+			//button control boolean
+			buttonState = false;
+			//step detection boolean
+			activityRunning = false;
+		}
+	}
+
+	//set up broadcast receiver
+	private BroadcastReceiver broadcastNotificationReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent broadcastIntent) {
+			ChangeButton(broadcastIntent);
+		}
+	};
 }

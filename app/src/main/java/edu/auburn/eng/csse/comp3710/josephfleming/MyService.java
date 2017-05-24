@@ -1,8 +1,10 @@
 package edu.auburn.eng.csse.comp3710.josephfleming;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
@@ -13,6 +15,7 @@ import android.hardware.SensorManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 /**
  * Created by Patrick on 3/17/2017.
@@ -21,47 +24,64 @@ import android.util.Log;
  */
 
 public class MyService extends Service implements SensorEventListener {
-//, AudioManager.OnAudioFocusChangeListener
-    /*  ==============================
-        VARIABLES
-        ==============================
-     */
-    //system
-    private boolean activityRunning = false;
 
-    //media
+    //SYSTEM
+    private boolean activityRunning = false;
+    private static final String TAG = "TELSERVICE";
+
+    //MEDIA
     private MediaPlayer playerTrack1;
     private MediaPlayer playerTrack2;
     private MediaPlayer playerTrack3;
     private MediaPlayer playerTrack4;
 
-    //audio manager
+    //AUDIO MANAGER
     private AudioManager.OnAudioFocusChangeListener focusListener = null;
     private AudioManager am = null;
 
+    //HEADSET
+    private int headsetSwitch = 1;
 
+    //BROADCAST NOTIFICATION
+    public static final String BROADCAST_NOTIFICTION = "edu.auburn.eng.csse.comp3710.josephfleming.broadcastalert";
+    private Intent broadcastIntent;
 
-    //sensor
+    //SENSOR
     private SensorManager sensorManager;
+    private Sensor stepSensor;
     private long timeStamp;
 
-    //telephony
+    //TELEPHONY
     private boolean isPausedInCall = true;
     private PhoneStateListener phoneStateListener;
     private TelephonyManager telephonyManager;
 
-    //math
+    //APP RELATED CONSTANTS
     private static long CONVERTER = 1000000;
     private static double FIVE_MPH = 324.7;
     private static double SIX_MPH = 261.1;
     private static double EIGHT_MPH = 196.9;
     private static double TEN_MPH = 171.5;
 
-    //======================================
-
+    /*
+    =========================================================================
+    SERVICE CONTROL OVERRIDES
+    =========================================================================
+     */
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    @Override
+    public void onCreate(){
+        Log.v(TAG, "Creating Service");
+        //register headset receiver
+        registerReceiver(headsetReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
+
+
+        //instantiate intent
+        broadcastIntent = new Intent(BROADCAST_NOTIFICTION);
     }
 
     @Override
@@ -70,6 +90,14 @@ public class MyService extends Service implements SensorEventListener {
 
         //initialize sensor manager
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        //register sensor listener
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+        if (stepSensor != null) {
+            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+        } else {
+            Toast.makeText(this, "Count sensor not available!", Toast.LENGTH_LONG).show();
+        }
         //initialize media players
 
         playerTrack1 = MediaPlayer.create(getApplicationContext(), R.raw.runtrack1);
@@ -106,14 +134,14 @@ public class MyService extends Service implements SensorEventListener {
             }
         };
 
-        Log.v("TAG", "Starting telephony.");
+        Log.v(TAG, "Starting telephony.");
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        Log.v("TAG", "Starting listener.");
+        Log.v(TAG, "Starting listener.");
         //set phone state listener to pause audio when handling calls
         phoneStateListener = new PhoneStateListener(){
             @Override
             public void onCallStateChanged(int state, String incomingNumber){
-                Log.v("TAG", "Starting CallStateChange.");
+                Log.v(TAG, "Starting CallStateChange.");
                 switch(state){
                     case TelephonyManager.CALL_STATE_OFFHOOK:
                     case TelephonyManager.CALL_STATE_RINGING:
@@ -149,8 +177,57 @@ public class MyService extends Service implements SensorEventListener {
         return START_STICKY;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
 
+        //clear phone state listener (for phone calls)
+        if(phoneStateListener != null){
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
+        }
 
+        //release audio focus (for giving focus to other apps)
+        if(focusListener != null){
+            am.abandonAudioFocus(focusListener);
+            am = null;
+            focusListener = null;
+        }
+
+        //unregister headsetReceiver
+        if(headsetReceiver != null){
+            unregisterReceiver(headsetReceiver);
+        }
+
+        //unregister sensor listener
+        if(stepSensor != null){
+            sensorManager.unregisterListener(this);
+        }
+
+        //stop playing all audio tracks & release media players
+        if(playerTrack1.isPlaying()){
+            playerTrack1.stop();
+        }
+        if(playerTrack2.isPlaying()){
+            playerTrack2.stop();
+        }
+        if(playerTrack3.isPlaying()){
+            playerTrack3.stop();
+        }
+        if(playerTrack4.isPlaying()){
+            playerTrack4.stop();
+        }
+
+        playerTrack1.release();
+        playerTrack2.release();
+        playerTrack3.release();
+        playerTrack4.release();
+    }
+
+    /*
+    =========================================================================
+    SENSOR MANAGER OVERRIDES
+    =========================================================================
+     */
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (activityRunning) {
@@ -158,6 +235,84 @@ public class MyService extends Service implements SensorEventListener {
         }
     }
 
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+        //unused override
+    }
+
+    /*
+    =========================================================================
+    INITIALIZE BROADCAST RECEIVER - handle changes for headset unplug
+    =========================================================================
+     */
+    private BroadcastReceiver headsetReceiver = new BroadcastReceiver(){
+        private boolean headsetConnected = false;
+
+        @Override
+        public void onReceive(Context context, Intent intent){
+            //Log.v(TAG, "ACTION_HEADSET_PLUG Intent Received");
+            if(intent.hasExtra("state")){
+                if(headsetConnected && intent.getIntExtra("state", 0) == 0){
+                    headsetConnected = false;
+                    headsetSwitch = 0;
+                    PlayButtonBroadcast();
+                    //Log.v(TAG,"State = headset disconnected");
+                }
+                else if(!headsetConnected && intent.getIntExtra("state", 0) == 1){
+                    headsetConnected = true;
+                    headsetSwitch = 1;
+                    //Log.v(TAG,"State = headset connected");
+                }
+            }
+            switch(headsetSwitch){
+                case (0):
+                    headsetDisconnected();
+                    break;
+                case (1):
+                    break;
+            }
+        }
+    };
+
+    /*
+    =========================================================================
+    LOCAL MEDIA HANDLING FUNCTIONS
+    =========================================================================
+     */
+    private void headsetDisconnected(){
+        stopSelf();
+    }
+
+    public void playMedia(){
+        //play music track 1
+        playerTrack1.start();
+    }
+
+    public void pauseMedia(){
+        if(playerTrack1.isPlaying()){
+            playerTrack1.pause();
+        }
+        if(playerTrack2.isPlaying()){
+            playerTrack2.stop();
+        }
+        if(playerTrack3.isPlaying()){
+            playerTrack3.stop();
+        }
+        if(playerTrack4.isPlaying()){
+            playerTrack4.stop();
+        }
+    }
+
+    private void PlayButtonBroadcast(){
+        //Log.v(TAG, "Headset broadcast sent");
+        broadcastIntent.putExtra("stop", "1");
+        sendBroadcast(broadcastIntent);
+    }
+    /*
+    =========================================================================
+    CORE APP FUNCTIONALITY RELATED FUNCTIONS
+    =========================================================================
+     */
     public void recordTimeStamp(SensorEvent event){
         Log.i("StepDetected","You have stepped!");
         if(timeStamp != 0){
@@ -177,170 +332,72 @@ public class MyService extends Service implements SensorEventListener {
         String temp = Long.toString(conversion);
         Log.i("conversion", temp);
         if(conversion >= FIVE_MPH){
+            Log.i("conversion", "5mph");
             //stop all other tracks
-            if(playerTrack2.isPlaying() == true){
+            if(playerTrack2.isPlaying()){
                 playerTrack2.pause();
             }
-            if(playerTrack3.isPlaying() == true){
+            if(playerTrack3.isPlaying()){
                 playerTrack3.pause();
             }
-            if(playerTrack4.isPlaying() == true){
-                playerTrack4.pause();
-            }
-            //play music track 1
-            playerTrack1.start();
-        }
-        else if((conversion < FIVE_MPH) && (conversion >= SIX_MPH)){
-            //stop all other tracks
-            if(playerTrack1.isPlaying() == true){
-                playerTrack1.pause();
-            }
-            if(playerTrack3.isPlaying() == true){
-                playerTrack3.pause();
-            }
-            if(playerTrack4.isPlaying() == true){
+            if(playerTrack4.isPlaying()){
                 playerTrack4.pause();
             }
             //play music track 2
-            playerTrack2.start();
-        }
-        else if((conversion < SIX_MPH) && (conversion >= EIGHT_MPH)){
-            //stop all other tracks
-            if(playerTrack2.isPlaying() == true){
-                playerTrack2.pause();
+            if(!playerTrack1.isPlaying()){
+                playerTrack1.start();
             }
-            if(playerTrack1.isPlaying() == true){
+        }
+        else if((conversion < FIVE_MPH) && (conversion >= SIX_MPH)){
+            Log.i("conversion", "6mph");
+            //stop all other tracks
+            if(playerTrack1.isPlaying()){
                 playerTrack1.pause();
             }
-            if(playerTrack4.isPlaying() == true){
+            if(playerTrack3.isPlaying()){
+                playerTrack3.pause();
+            }
+            if(playerTrack4.isPlaying()){
+                playerTrack4.pause();
+            }
+            //play music track 2
+            if(!playerTrack2.isPlaying()){
+                playerTrack2.start();
+            }
+        }
+        else if((conversion < SIX_MPH) && (conversion >= EIGHT_MPH)){
+            Log.i("conversion", "7mph");
+            //stop all other tracks
+            if(playerTrack1.isPlaying()){
+                playerTrack1.pause();
+            }
+            if(playerTrack2.isPlaying()){
+                playerTrack2.pause();
+            }
+            if(playerTrack4.isPlaying()){
                 playerTrack4.pause();
             }
             //play music track 3
-            playerTrack3.start();
+            if(!playerTrack3.isPlaying()){
+                playerTrack3.start();
+            }
         }
         else if((conversion < EIGHT_MPH) && (conversion >= TEN_MPH)){
+            Log.i("conversion", "8mph");
             //stop all other tracks
-            if(playerTrack2.isPlaying() == true){
-                playerTrack2.pause();
-            }
-            if(playerTrack3.isPlaying() == true){
-                playerTrack3.pause();
-            }
-            if(playerTrack1.isPlaying() == true){
+            if(playerTrack1.isPlaying()){
                 playerTrack1.pause();
             }
+            if(playerTrack2.isPlaying()){
+                playerTrack2.pause();
+            }
+            if(playerTrack3.isPlaying()){
+                playerTrack3.pause();
+            }
             //play music track 4
-            playerTrack4.start();
+            if(!playerTrack4.isPlaying()){
+                playerTrack4.start();
+            }
         }
     }
-
-    public void pauseMedia(){
-        if(playerTrack1.isPlaying() == true){
-            playerTrack1.pause();
-        }
-        if(playerTrack2.isPlaying() == true){
-            playerTrack2.stop();
-        }
-        if(playerTrack3.isPlaying() == true){
-            playerTrack3.stop();
-        }
-        if(playerTrack4.isPlaying() == true){
-            playerTrack4.stop();
-        }
-    }
-
-    public void playMedia(){
-        //play music track 1
-        playerTrack1.start();
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-        //unused override
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        //clear phone state listener (for phone calls)
-        if(phoneStateListener != null){
-            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
-        }
-
-        //release audio focus (for giving focus to other apps)
-        am.abandonAudioFocus(focusListener);
-        am = null;
-        focusListener = null;
-
-
-        //stop playing all audio tracks & release media players
-        if(playerTrack1.isPlaying() == true){
-            playerTrack1.stop();
-        }
-        if(playerTrack2.isPlaying() == true){
-            playerTrack2.stop();
-        }
-        if(playerTrack3.isPlaying() == true){
-            playerTrack3.stop();
-        }
-        if(playerTrack4.isPlaying() == true){
-            playerTrack4.stop();
-        }
-        playerTrack1.release();
-        playerTrack2.release();
-        playerTrack3.release();
-        playerTrack4.release();
-
-
-
-    }
-
-    /*@Override
-    public void onAudioFocusChange(int focusChange) {
-        switch (focusChange)
-        {
-            case AudioManager.AUDIOFOCUS_GAIN:
-                //play
-                playMedia();
-                break;
-
-            case AudioManager.AUDIOFOCUS_LOSS:
-                //stop
-                if(playerTrack1.isPlaying() == true){
-                    playerTrack1.pause();
-                }
-                if(playerTrack2.isPlaying() == true){
-                    playerTrack2.stop();
-                }
-                if(playerTrack3.isPlaying() == true){
-                    playerTrack3.stop();
-                }
-                if(playerTrack4.isPlaying() == true){
-                    playerTrack4.stop();
-                }
-                break;
-
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                //pause
-                //stop
-                if(playerTrack1.isPlaying() == true){
-                    playerTrack1.pause();
-                }
-                if(playerTrack2.isPlaying() == true){
-                    playerTrack2.stop();
-                }
-                if(playerTrack3.isPlaying() == true){
-                    playerTrack3.stop();
-                }
-                if(playerTrack4.isPlaying() == true){
-                    playerTrack4.stop();
-                }
-                break;
-
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                //reduce volume
-                break;
-        }
-    }*/
 }
